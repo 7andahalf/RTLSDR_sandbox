@@ -5,7 +5,7 @@ https://www.youtube.com/watch?v=RuZPJMp2Nt0
 
 # prerequisits and Credits for libraries
 - Install python wrapper for RTLSDR from https://github.com/roger-/pyrtlsdr
-
+- math from: http://ultra.sdk.free.fr/docs/DxO/FM%20DEMODULATION%20USING%20A%20DIGITAL%20RADIO%20AND%20DIGITAL%20SIGNAL%20PROCESSING%20Digradio.pdf
 # How to use:
 a) To record IQ and FM:
 	- edit below var 'sdr.center_freq' to the required FM station

@@ -11,4 +11,3 @@ Video: https://www.youtube.com/watch?v=RuZPJMp2Nt0
 - add filters to remove noise, currently no filters
 - modularize code
 - optimize operations to make code faster
-- modularize code
