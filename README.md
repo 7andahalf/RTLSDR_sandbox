@@ -19,7 +19,7 @@ The audio was used to contruct image. Since there was noise, the image looks ver
 
 ![Alt text](readmeImgs/gen.png?raw=true "A few lines of generated image")
 
-![Alt text](readmeImgs/original.jpg?raw=true "Ideal image")
+![Alt text](readmeImgs/original.png?raw=true "Ideal image")
 
 We can observe that the generated image is a subset of ideal one, there is only an offset and less size. So we can confirm this proof of concept of NOAA APT decoding. We need to improve the FM demodulation to get better looking image.
 
