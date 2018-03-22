@@ -9,12 +9,16 @@
 ## Preliminary results
 ### FM demodulation of NOAA to get audio
 Audio was extracted from the raw IQ files by the script. The audio is fairly a good estimate but has noise. This needs to be worked on. However we can see that the waveform closely relates to a standard NOAAAPT line. The frequency domain also shows that the sound is 2.4kHz as expected.
+
 ![Alt text](readmeImgs/audio_comp.jpg?raw=true "Current decoded pulse vs. ideal pulse")
+
 ![Alt text](readmeImgs/fft_aud.jpg?raw=true "FFT of decoded audio")
 
 ### using demodulated audio to construct image
 The audio was used to contruct image. Since there was noise, the image looks very bad. But we can make out atleast the sync signals and rough dark and light areas of image.
+
 ![Alt text](readmeImgs/gen.png?raw=true "A few lines of generated image")
+
 ![Alt text](readmeImgs/original.jpg?raw=true "Ideal image")
 
 We can observe that the generated image is a subset of ideal one, there is only an offset and less size. So we can confirm this proof of concept of NOAA APT decoding. We need to improve the FM demodulation to get better looking image.
