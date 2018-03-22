@@ -1,6 +1,7 @@
 '''
 ### Simple Python - RTLSDR script to capture raw data as well as demod FM
 # Author: Vinay C K (github.com/7andahalf)
+A small demo video: https://youtu.be/cCH-fBXAYAc
 
 # prerequisits and Credits for libraries
 - Install python wrapper for RTLSDR from https://github.com/roger-/pyrtlsdr

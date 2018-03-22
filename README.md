@@ -1,6 +1,7 @@
 # A simple NOAA APT decoder
+A small demo video: https://youtu.be/cCH-fBXAYAc
 
-##Goal
+## Goal
 - to create a simple FM demod tool
 - capture raw data at 2MHz and store in a file OR read from a IQ.wav file
 - demod FM and store audio in a .wav file
@@ -23,7 +24,7 @@ The audio was used to contruct image. Since there was noise, the image looks ver
 
 We can observe that the generated image is a subset of ideal one, there is only an offset and less size. So we can confirm this proof of concept of NOAA APT decoding. We need to improve the FM demodulation to get better looking image.
 
-##further steps:
+## Further steps:
 - add filters to remove noise from FM, currently not many filters
 - modularize code
 - optimize operations to make code faster (chunk processing, memory mapping etc.)
