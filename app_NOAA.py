@@ -46,7 +46,7 @@ import PIL
 
 # configure device
 recordFor = 10 # time in seconds
-freqOffset = -30000
+freqOffset = 30000
 FMFreq = 137619408 # @ freq of FM station?
 SDRSampleRate = 2.048e6 # 2MHz sampling rate
 FMBandwidth = 60000 # BW of FM
@@ -60,7 +60,7 @@ if(len(sys.argv) > 1):
 	numSamp, data = read(sys.argv[1]) # any faster methods?
 	print "File read complete"
 	print "Converting to complex IQ form"
-	samples = data[:,1] + 1j * data[:,0] # any faster methods?
+	samples = data[:,0] + 1j * data[:,1] # any faster methods?
 	print "Conversion complete"
 	audFileName = sys.argv[1].split(".")[0] + "_FM.wav"
 else:
@@ -80,36 +80,47 @@ else:
 	audFileName = "DIRECTDEMOD_"+datetime.datetime.now().strftime("%Y%m%d_%H%M%S_")+str(int(FMFreq))+"Hz_FM.wav"
 
 ## FM Demoduation
-# convert to baseband: mult by e^(-j*2pi*freq_diff*time)
-sig_baseBand = np.array(samples).astype("complex64")
-sig_baseBand *= np.exp(-1.0j*2.0*np.pi* freqOffset*np.arange(len(sig_baseBand))/SDRSampleRate)
+# demodulate chunk by chunk
+chunk_size = 40000000
+fin_aud = []
+for i in range(1+int(len(samples)/chunk_size)):
+	print "processing chunk", i+1
+	# convert to baseband: mult by e^(-j*2pi*freq_diff*time)
+	sig_baseBand = np.array(samples[i*chunk_size:(i+1)*chunk_size]).astype("complex64")
+	sig_baseBand *= np.exp(-1.0j*2.0*np.pi* freqOffset*np.arange(len(sig_baseBand))/SDRSampleRate)
+	print "A"
 
-# IF filter
-lpf = signal.remez(64, [0, FMBandwidth, FMBandwidth+(SDRSampleRate/2-FMBandwidth)/4, SDRSampleRate/2], [1,0], Hz=SDRSampleRate)  
-sig_baseBand = signal.lfilter(lpf, 1.0, sig_baseBand)
-
-# limit bandwidth of FM by downsampling
-targetFs = FMBandwidth  
-jumpIndex = int(SDRSampleRate / targetFs)  
-sig_baseBand_bwlim = sig_baseBand[0::jumpIndex]  # skip samples to downsample
-Fs_bwlim = SDRSampleRate/jumpIndex # Calculate the new sampling rate
-
-# FM demod by polar discrimination
-sig_fmd = sig_baseBand_bwlim[1:] * np.conj(sig_baseBand_bwlim[:-1])  
-sig_fm = np.angle(sig_fmd)
-
-# Filter audio
-b, a = butter(1, [1800 / (0.5 * Fs_bwlim), 3000 / (0.5 * Fs_bwlim)], btype='band')
-sig_fm = lfilter(b, a, sig_fm)
-
-# downsample to audio sampling rate of 44k
-targetFs = 11025.0  
-Fs_audlim = 20800
-sig_aud = signal.resample(sig_fm, int(20800 * len(sig_fm)/Fs_bwlim))
-
-# resize so that max amp = 1
-sig_aud *= 1.0 / np.max(np.abs(sig_aud))  
-
+	# gaussian filter
+	window = signal.blackmanharris(101)
+	sig_baseBand = signal.convolve(sig_baseBand, window, mode='same')
+	print "B"
+	# IF filter
+	lpf = signal.remez(64, [0, FMBandwidth, FMBandwidth+(SDRSampleRate/2-FMBandwidth)/4, SDRSampleRate/2], [1,0], Hz=SDRSampleRate)  
+	sig_baseBand = signal.lfilter(lpf, 1.0, sig_baseBand)
+	print "C"
+	# limit bandwidth of FM by downsampling
+	targetFs = FMBandwidth  
+	jumpIndex = int(SDRSampleRate / targetFs)  
+	sig_baseBand_bwlim = sig_baseBand[0::jumpIndex]  # skip samples to downsample
+	Fs_bwlim = SDRSampleRate/jumpIndex # Calculate the new sampling rate
+	print "D"
+	# FM demod by polar discrimination
+	sig_fmd = sig_baseBand_bwlim[1:] * np.conj(sig_baseBand_bwlim[:-1])  
+	sig_fm = np.angle(sig_fmd)
+	print "E"
+	# Filter audio
+	b, a = butter(1, [1800 / (0.5 * Fs_bwlim), 3000 / (0.5 * Fs_bwlim)], btype='band')
+	sig_fm = lfilter(b, a, sig_fm)
+	print "F"
+	# downsample to audio sampling rate of 44k  
+	Fs_audlim = 20800
+	sig_aud = signal.resample(sig_fm, int(20800 * len(sig_fm)/Fs_bwlim))
+	print "G"
+	# resize so that max amp = 1
+	sig_aud *= 1.0 / np.max(np.abs(sig_aud))  
+	print "H"
+	fin_aud.extend(sig_aud)
+sig_aud = np.array(fin_aud)
 print "Done FM demod"
 # save .wav of audio
 write(audFileName, Fs_audlim, sig_aud)
@@ -132,6 +143,7 @@ data = np.round(255 * (reshaped[:, 2] - low) / delta)
 data[data < 0] = 0
 data[data > 255] = 255
 digitized = data.astype(np.uint8)
+
 lines = int(len(digitized) / 2080)
 matrix = digitized.reshape((lines, 2080))
 
