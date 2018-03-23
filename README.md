@@ -15,8 +15,6 @@ Raw IQ was used to FM demodulate it and get audio then image was constructed. Fo
 
 input file cortesy (Andreas Hornig (https://github.com/aerospaceresearch)): https://drive.google.com/open?id=18E-h3DWMbzC5W6pS5mHzA-4Yt02WxxzX
 
-We can observe that the generated image is a subset of ideal one, there is only an offset and less size. So we can confirm this proof of concept of NOAA APT decoding. We need to improve the FM demodulation to get better looking image.
-
 ## Further steps:
 - modularize code
 - optimize operations to make code faster (chunk processing, memory mapping etc.)
