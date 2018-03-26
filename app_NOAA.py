@@ -6,7 +6,7 @@ A small demo video: https://youtu.be/cCH-fBXAYAc
 # prerequisits and Credits for libraries
 - Install python wrapper for RTLSDR from https://github.com/roger-/pyrtlsdr
 - math from: http://ultra.sdk.free.fr/docs/DxO/FM%20DEMODULATION%20USING%20A%20DIGITAL%20RADIO%20AND%20DIGITAL%20SIGNAL%20PROCESSING%20Digradio.pdf
-- from: https://github.com/zacstewart/apt-decoder
+- am from: https://github.com/zacstewart/apt-decoder
 # How to use:
 a) To record IQ and NOAA image + demod FM:
 	- edit below var 'sdr.center_freq' to the required FM station
@@ -95,8 +95,7 @@ for i in range(1+int(len(samples)/chunk_size)):
 	sig_baseBand = signal.convolve(sig_baseBand, window, mode='same')
 	print "B"
 	# IF filter
-	lpf = signal.remez(64, [0, FMBandwidth, FMBandwidth+(SDRSampleRate/2-FMBandwidth)/4, SDRSampleRate/2], [1,0], Hz=SDRSampleRate)  
-	sig_baseBand = signal.lfilter(lpf, 1.0, sig_baseBand)
+	# add later if needed
 	print "C"
 	# limit bandwidth of FM by downsampling
 	targetFs = FMBandwidth  
@@ -109,8 +108,7 @@ for i in range(1+int(len(samples)/chunk_size)):
 	sig_fm = np.angle(sig_fmd)
 	print "E"
 	# Filter audio
-	b, a = butter(1, [1800 / (0.5 * Fs_bwlim), 3000 / (0.5 * Fs_bwlim)], btype='band')
-	sig_fm = lfilter(b, a, sig_fm)
+	# add later if needed
 	print "F"
 	# downsample to audio sampling rate of 44k  
 	Fs_audlim = 20800
@@ -125,7 +123,7 @@ print "Done FM demod"
 # save .wav of audio
 write(audFileName, Fs_audlim, sig_aud)
 
-## decode image. 
+## decode image. source of am code mentioned above.
 # limit size to multiple of 20800
 sig_aud = sig_aud[:20800*int(len(sig_aud) // 20800)]
 
