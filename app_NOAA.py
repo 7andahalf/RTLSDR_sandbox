@@ -52,7 +52,8 @@ if not len(data[0,:]) == 2:
 	exit()
 print("File read complete")
 print("Converting to complex IQ form")
-samples = data[:,0] + 1j * data[:,1] # any faster methods?
+#samples = data[:,0] + 1j * data[:,1] # any faster methods?
+#samples *= 1.0 / np.max(np.abs(samples))
 print("Conversion complete")
 audFileName = sys.argv[1].split(".")[0] + "_FM.wav"
 
@@ -60,10 +61,11 @@ audFileName = sys.argv[1].split(".")[0] + "_FM.wav"
 # demodulate chunk by chunk
 chunk_size = 20000000
 fin_aud = []
-for i in range(1+int(len(samples)/chunk_size)):
-	print("processing chunk", i+1,"/",1+int(len(samples)/chunk_size))
+for i in range(1+int(len(data[:,0])/chunk_size)):
+	samples = data[i*chunk_size:(i+1)*chunk_size,0] + 1j * data[i*chunk_size:(i+1)*chunk_size,1] # any faster methods?
+	print("processing chunk", i+1,"/",1+int(len(data[:,0])/chunk_size))
 	# convert to baseband: mult by e^(-j*2pi*freq_diff*time)
-	sig_baseBand = np.array(samples[i*chunk_size:(i+1)*chunk_size]).astype("complex64")
+	sig_baseBand = np.array(samples).astype("complex64")
 	sig_baseBand *= np.exp(-1.0j*2.0*np.pi* freqOffset*np.arange(len(sig_baseBand))/SDRSampleRate)
 	print("A", end = '', flush=True)
 
