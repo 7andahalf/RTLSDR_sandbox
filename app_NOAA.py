@@ -47,10 +47,14 @@ if not (len(sys.argv) == 2):
 
 # read samples from file
 print("Will read samples from file", sys.argv[1])
-numSamp, data = read(sys.argv[1], mmap=True) # any faster methods?
-if not len(data[0,:]) == 2:
-	print("The input file doesn't have 2 channels!")
-	exit()
+
+
+#numSamp, data = read(sys.argv[1], mmap=True) # any faster methods?
+data = np.memmap(sys.argv[1], offset=44)
+
+#if not len(data[0,:]) == 2:
+#	print("The input file doesn't have 2 channels!")
+#	exit()
 print("File read complete")
 print("Converting to complex IQ form")
 #samples = data[:,0] + 1j * data[:,1] # any faster methods?
@@ -63,16 +67,19 @@ audFileName = sys.argv[1].split(".")[0] + "_FM.wav"
 chunk_size = 20000000
 fin_aud = []
 i = 0
-samples = data[i*chunk_size:(i+1)*chunk_size,0] + 1j * data[i*chunk_size:(i+1)*chunk_size,1]
+#samples = data[i*chunk_size:(i+1)*chunk_size,0] + 1j * data[i*chunk_size:(i+1)*chunk_size,1]
 
-for i in range(1+int(len(data[:,0])/chunk_size)):
-	samples = data[i*chunk_size:(i+1)*chunk_size,0] + 1j * data[i*chunk_size:(i+1)*chunk_size,1] # any faster methods?
-	print("processing chunk", i+1,"/",1+int(len(data[:,0])/chunk_size))
-
-	
+#for i in range(1+int(0*len(data[:,0])/chunk_size)):
+for i in range(1+int(len(data)/(2*chunk_size))):
+	#samples = data[i*chunk_size:(i+1)*chunk_size,0] + 1j * data[i*chunk_size:(i+1)*chunk_size,1] # any faster methods?
+	samples = (data[2*i*chunk_size:2*(i+1)*chunk_size:2]) + 1j * (data[1+2*i*chunk_size:1+2*(i+1)*chunk_size:2])
+	#print(samples[1:10])
+	#print("processing chunk", i+1,"/",1+int(len(data[:,0])/chunk_size))
+	print("processing chunk", i+1,"/",1+int(len(data)/(2*chunk_size)))
+	#print(sum(samples)/len(samples))
 
 	# convert to baseband: mult by e^(-j*2pi*freq_diff*time)
-	sig_baseBand = np.array(samples).astype("complex64")
+	sig_baseBand = np.array(samples).astype("complex64") - (129 + 1j*129)
 	sig_baseBand *= np.exp(-1.0j*2.0*np.pi* freqOffset*np.arange(len(sig_baseBand))/SDRSampleRate)
 	print("A", end = '', flush=True)
 
@@ -180,7 +187,7 @@ for i in range(int(len(digitized)/linesize) - 2):
 			minJ = j
 			minVar = diff
 
-	print(minJ - minI) # difference from sync1 to sync2
+	#print(minJ - minI) # difference from sync1 to sync2
 	#arr.append(abs(minJ-minI))
 
 	# minute adjustments
