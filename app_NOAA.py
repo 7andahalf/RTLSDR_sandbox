@@ -24,6 +24,7 @@ Thanks!
 from pylab import *
 import numpy as np  
 import scipy.signal as signal
+import scipy
 from scipy.signal import butter, lfilter
 import sys
 from scipy.io.wavfile import read, write
@@ -32,14 +33,14 @@ import PIL
 
 # configure device
 recordFor = 10 # time in seconds
-freqOffset = 30000
+freqOffset = -30000
 FMFreq = 137619408 # @ freq of FM station?
 SDRSampleRate = 2.048e6 # 2MHz sampling rate
 FMBandwidth = 60000 # BW of FM
 
 # obtain IQ data either by capture or from file
 samples = None # to store IQ samples
-audFileName = None
+audFileName = "ress"
 if not (len(sys.argv) == 2):
 	print("Usage: python_NOAA.py <IQ.wav>")
 	exit()
@@ -61,13 +62,24 @@ audFileName = sys.argv[1].split(".")[0] + "_FM.wav"
 # demodulate chunk by chunk
 chunk_size = 20000000
 fin_aud = []
+i = 0
+samples = data[i*chunk_size:(i+1)*chunk_size,0] + 1j * data[i*chunk_size:(i+1)*chunk_size,1]
+
 for i in range(1+int(len(data[:,0])/chunk_size)):
 	samples = data[i*chunk_size:(i+1)*chunk_size,0] + 1j * data[i*chunk_size:(i+1)*chunk_size,1] # any faster methods?
 	print("processing chunk", i+1,"/",1+int(len(data[:,0])/chunk_size))
+
+	
+
 	# convert to baseband: mult by e^(-j*2pi*freq_diff*time)
 	sig_baseBand = np.array(samples).astype("complex64")
 	sig_baseBand *= np.exp(-1.0j*2.0*np.pi* freqOffset*np.arange(len(sig_baseBand))/SDRSampleRate)
 	print("A", end = '', flush=True)
+
+	#psd(sig_baseBand, NFFT=1024, Fs=SDRSampleRate)
+	#xlabel('Frequency (MHz)')
+	#ylabel('Relative power (dB)')
+	#show()
 
 	# gaussian filter
 	window = signal.blackmanharris(151)
@@ -75,7 +87,8 @@ for i in range(1+int(len(data[:,0])/chunk_size)):
 	print("B", end = '', flush=True)
 
 	# IF filter
-	# add if necessary
+	lpf = signal.remez(64, [0, FMBandwidth, FMBandwidth+(SDRSampleRate/2-FMBandwidth)/4, SDRSampleRate/2], [1,0], Hz=SDRSampleRate)  
+	sig_baseBand = signal.lfilter(lpf, 1.0, sig_baseBand)
 
 	print("C", end = '', flush=True)
 
@@ -92,7 +105,8 @@ for i in range(1+int(len(data[:,0])/chunk_size)):
 	print("E", end = '', flush=True)
 
 	# Filter audio
-	# add later if needed
+	#b, a = butter(1, [1800 / (0.5 * Fs_bwlim), 3000 / (0.5 * Fs_bwlim)], btype='band')
+	#sig_fm = lfilter(b, a, sig_fm)
 	print("F", end = '', flush=True)
 
 	# downsample to audio sampling rate of 44k  
@@ -105,13 +119,15 @@ for i in range(1+int(len(data[:,0])/chunk_size)):
 	print("H")
 
 	fin_aud.extend(sig_aud)
-
+	del(samples)
 sig_aud = np.array(fin_aud)
 print("Done FM demod")
 
 # save .wav of audio
 write(audFileName, Fs_audlim, sig_aud)
 
+
+#Fs_audlim, sig_aud = read(sys.argv[1])
 ## decode image. source of am code mentioned above.
 # limit size to multiple of 20800
 sig_aud = sig_aud[:20800*int(len(sig_aud) // 20800)]
@@ -133,18 +149,74 @@ digitized = data.astype(np.uint8)
 
 # Look for sync signal
 pattern = [255 ,255 ,0 ,0 ,255 ,255 ,0 ,0 ,255 ,255 ,0 ,0 ,255 ,255 ,0 ,0 ,255 ,255 ,0 ,0 ,255 ,255 ,0 ,0 ,255 ,255]
+pattern2 = [255 ,255 ,255 ,0 ,0 ,255 ,255 ,255 ,0 ,0 ,255 ,255 ,255 ,0 ,0 ,255 ,255 ,255 ,0 ,0 ,255 ,255 ,255 ,0 ,0 ,255 ,255 ,255 ,0 ,0 ,255 ,255 ,255]
+pattern = scipy.ndimage.filters.gaussian_filter(pattern, 0.5)
+pattern2 = scipy.ndimage.filters.gaussian_filter(pattern2, 0.5)
 lengthPattern = len(pattern)
+lengthPattern2 = len(pattern2)
+filDig = scipy.ndimage.filters.gaussian_filter(digitized, 0.5)
 
+matrix = []
+ci = 0 # current index
+ex = 200 # error in checking
+linesize = 2080
+minuteadjust = 1
+pattenSize = 30
+arr = []
+for i in range(int(len(digitized)/linesize) - 2):
+	minVar = None
+	minI = 0
+	for j in range(ci,ci+linesize+ex):
+		diff = sum(abs(filDig[j:j+lengthPattern] - pattern))
+		if minVar == None or  diff < minVar:
+			minI = j
+			minVar = diff
+
+	minJ = 0
+	minVar = None
+	for j in range(ci,ci+linesize+ex):
+		diff = sum(abs(filDig[j:j+lengthPattern2] - pattern2))
+		if minVar == None or  diff < minVar:
+			minJ = j
+			minVar = diff
+
+	print(minJ - minI) # difference from sync1 to sync2
+	#arr.append(abs(minJ-minI))
+
+	# minute adjustments
+	'''
+	minA = 0
+	if len(matrix) > 0:
+		minVar = None
+		for j in range(-1*minuteadjust, minuteadjust+1):
+			diff = sum(abs(digitized[minI+j:minI+j+linesize][:pattenSize] - matrix[-1][:pattenSize]))
+			if minVar == None or  diff < minVar:
+				minA = j
+				minVar = diff
+			#print(minA)
+			print(j, minA, minVar, diff)
+	'''
+
+	matrix.append(digitized[minI:minI+linesize])
+	ci += linesize - ex
+#print(sum(arr)/len(arr))
+image = PIL.Image.fromarray(np.array(matrix))
+image.save(audFileName+".png")
+image.show()
+
+'''
 firstMatch = None
-for i in range(len(digitized) - lengthPattern):
-	if sum(abs(digitized[i:i+lengthPattern] - pattern)) < 1000:
+minVar = None
+for i in range(2080):
+	if minVar == None or sum(abs(digitized[i:i+lengthPattern] - pattern)) < minVar:
 		firstMatch = i
-		break
+		minVar = sum(abs(digitized[i:i+lengthPattern] - pattern))
 
 if firstMatch == None:
 	print("No image in the data!")
-	exit()
-
+	firstMatch = 0
+	#exit()
+firstMatch = 0
 # adjust sync
 digitized = digitized[firstMatch:]
 digitized = digitized[:2080*int(len(digitized) // 2080)]
@@ -154,13 +226,14 @@ matrix = digitized.reshape((int(len(digitized) / 2080), 2080))
 image = PIL.Image.fromarray(matrix)
 image.save(audFileName+".png")
 image.show()
+'''
 
-''' EXPERIMENTAL
+'''
 minVar = None
 minInd = None
 syncLocs = []
 for i in range(len(digitized) - lengthPattern):
-	if abs((i-firstMatch)-2080*int((i-firstMatch)/2080)) < 2:
+	if abs((i-firstMatch)-2080*int((i-firstMatch)/2080)) < 100:
 		if minVar == None or (sum(abs(digitized[i:i+lengthPattern] - pattern)) < minVar):
 			minVar = sum(abs(digitized[i:i+lengthPattern] - pattern))
 			minInd = i
